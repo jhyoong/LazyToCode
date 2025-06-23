@@ -73,7 +73,8 @@ async def main():
         result = await user_proxy.execute_workflow(
             coding_assistant=coding_assistant,
             prompt=args.prompt_content,
-            prompt_type=args.prompt_type
+            prompt_type=args.prompt_type,
+            debug_mode=args.debug
         )
         
         # Process results

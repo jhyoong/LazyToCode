@@ -6,6 +6,7 @@ from typing import Optional, Union
 from datetime import datetime
 
 from utils.logger import get_logger
+from utils.code_extractor import CodeExtractor
 
 class FileHandler:
     """Async file operations handler for LazyToCode."""
@@ -13,6 +14,7 @@ class FileHandler:
     def __init__(self, output_dir: Union[str, Path]):
         self.output_dir = Path(output_dir)
         self.logger = get_logger()
+        self.code_extractor = CodeExtractor()
         
         # Ensure output directory exists
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -49,13 +51,33 @@ class FileHandler:
                                  content: str, 
                                  filename: Optional[str] = None,
                                  language: Optional[str] = None,
-                                 create_backup: bool = True) -> Path:
+                                 create_backup: bool = True,
+                                 extract_code: bool = True,
+                                 debug_mode: bool = False) -> Path:
         """Write generated code to output directory."""
+        
+        # Extract clean code if requested
+        if extract_code:
+            self.logger.debug("Extracting clean code from model response")
+            detected_language, clean_code, extension = self.code_extractor.extract_and_clean(content, language)
+            
+            # Use detected language if none was provided
+            if not language:
+                language = detected_language
+            
+            # Use clean code
+            content_to_write = clean_code
+            
+            self.logger.info(f"Code extraction complete: language={detected_language}, extension={extension}")
+        else:
+            content_to_write = content
+            extension = self._get_file_extension(language, content)
         
         # Generate filename if not provided
         if not filename:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            extension = self._get_file_extension(language, content)
+            if not extension.startswith('.'):
+                extension = f".{extension}"
             filename = f"generated_code_{timestamp}{extension}"
         
         output_file = self.output_dir / filename
@@ -71,10 +93,15 @@ class FileHandler:
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(
                 None,
-                lambda: output_file.write_text(content, encoding='utf-8')
+                lambda: output_file.write_text(content_to_write, encoding='utf-8')
             )
             
             self.logger.info(f"Successfully wrote generated code to: {output_file}")
+            
+            # Save full model response in debug mode
+            if debug_mode and extract_code:
+                await self._save_debug_response(content, output_file)
+            
             return output_file
             
         except Exception as e:
@@ -101,6 +128,38 @@ class FileHandler:
             self.logger.error(f"Output directory validation failed: {e}")
             return False
     
+    async def _save_debug_response(self, full_response: str, code_file: Path) -> Optional[Path]:
+        """Save the full model response for debugging purposes."""
+        
+        try:
+            # Create debug filename based on the code file
+            debug_filename = f"{code_file.stem}_full_response.md"
+            debug_path = code_file.parent / debug_filename
+            
+            # Create debug content with metadata
+            debug_content = f"""# Full Model Response - Debug Log
+Generated: {datetime.now().isoformat()}
+Code File: {code_file.name}
+
+---
+
+{full_response}
+"""
+            
+            # Write debug file
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(
+                None,
+                lambda: debug_path.write_text(debug_content, encoding='utf-8')
+            )
+            
+            self.logger.info(f"Debug response saved to: {debug_path}")
+            return debug_path
+            
+        except Exception as e:
+            self.logger.warning(f"Failed to save debug response: {e}")
+            return None
+
     async def _create_backup(self, file_path: Path) -> Optional[Path]:
         """Create a backup of existing file."""
         

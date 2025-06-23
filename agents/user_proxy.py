@@ -81,7 +81,7 @@ class UserProxy(RoutedAgent):
             }
             return result
     
-    async def save_generated_code(self, result: dict, filename: Optional[str] = None) -> Optional[Path]:
+    async def save_generated_code(self, result: dict, filename: Optional[str] = None, debug_mode: bool = False) -> Optional[Path]:
         """Save generated code to output directory."""
         
         if result["status"] != "success" or not result["generated_code"]:
@@ -94,7 +94,8 @@ class UserProxy(RoutedAgent):
             # Save the generated code
             output_file = await self.file_handler.write_generated_code(
                 content=result["generated_code"],
-                filename=filename
+                filename=filename,
+                debug_mode=debug_mode
             )
             
             self.logger.info(f"Generated code saved to: {output_file}")
@@ -108,7 +109,8 @@ class UserProxy(RoutedAgent):
                              coding_assistant, 
                              prompt: str, 
                              prompt_type: str = "text",
-                             output_filename: Optional[str] = None) -> dict:
+                             output_filename: Optional[str] = None,
+                             debug_mode: bool = False) -> dict:
         """Execute the complete workflow from prompt to saved code."""
         
         try:
@@ -123,7 +125,7 @@ class UserProxy(RoutedAgent):
             # Step 3: Save generated code (if successful)
             output_file = None
             if result["status"] == "success":
-                output_file = await self.save_generated_code(result, output_filename)
+                output_file = await self.save_generated_code(result, output_filename, debug_mode)
             
             # Prepare final result
             final_result = {
