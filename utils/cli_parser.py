@@ -37,8 +37,8 @@ Examples:
     parser.add_argument(
         "--model",
         type=str,
-        default=os.getenv("OLLAMA_MODEL", "Qwen2.5-Coder"),
-        help="Model name (default: Qwen2.5-Coder)"
+        default=os.getenv("OLLAMA_MODEL", "Qwen2.5-Coder:14b"),
+        help="Model name (default: Qwen2.5-Coder:14b)"
     )
     
     parser.add_argument(

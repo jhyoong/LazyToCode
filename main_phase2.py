@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-LazyToCode - Multi-Agent AI Coding System
+LazyToCode Phase 2 - Multi-Agent AI Coding System
 
 A CLI tool that uses a multi-agent system to plan, write, and review
 complete software projects based on user prompts.
@@ -22,18 +22,18 @@ from orchestrator import WorkflowOrchestrator
 from utils.agent_messages import ProjectInfo
 
 
-def parse_arguments():
-    """Parse command line arguments for LazyToCode CLI."""
+def parse_phase2_arguments():
+    """Parse command line arguments for Phase 2 LazyToCode CLI."""
     load_dotenv()
     
     parser = argparse.ArgumentParser(
-        description="LazyToCode - Multi-Agent AI Coding System",
+        description="LazyToCode Phase 2 - Multi-Agent AI Coding System",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python main.py --prompt "Create a Python CLI calculator"
-  python main.py --prompt "Build a FastAPI REST API" --output-dir ./my_api --retry-attempts 2
-  python main.py --prompt ./prompts/web_scraper.txt --model qwen2.5-coder:14b --debug
+  python main_phase2.py --prompt "Create a Python CLI calculator"
+  python main_phase2.py --prompt "Build a FastAPI REST API" --output-dir ./my_api --retry-attempts 2
+  python main_phase2.py --prompt ./prompts/web_scraper.txt --model qwen2.5-coder:14b --debug
         """
     )
     
@@ -56,8 +56,8 @@ Examples:
     parser.add_argument(
         "--model",
         type=str,
-        default=os.getenv("OLLAMA_MODEL", "qwen2.5-coder:14b"),
-        help="Model name (default: qwen2.5-coder:14b)"
+        default=os.getenv("OLLAMA_MODEL", "qwen2.5-coder"),
+        help="Model name (default: qwen2.5-coder)"
     )
     
     parser.add_argument(
@@ -85,8 +85,8 @@ Examples:
     parser.add_argument(
         "--timeout",
         type=int,
-        default=60,
-        help="Workflow timeout in minutes (default: 60)"
+        default=30,
+        help="Workflow timeout in minutes (default: 30)"
     )
     
     parser.add_argument(
@@ -95,21 +95,15 @@ Examples:
         help="Enable verbose logging"
     )
     
-    parser.add_argument(
-        "--interactive",
-        action="store_true",
-        help="Enable interactive plan approval mode"
-    )
-    
     args = parser.parse_args()
     
     # Validate and process arguments
-    args = _validate_arguments(args)
+    args = _validate_phase2_arguments(args)
     
     return args
 
 
-def _validate_arguments(args):
+def _validate_phase2_arguments(args):
     """Validate and process parsed arguments."""
     # Process prompt - check if it's a file path
     if args.prompt.endswith('.txt') and os.path.isfile(args.prompt):
@@ -135,23 +129,23 @@ def _validate_arguments(args):
 
 
 async def main():
-    """Main async function for LazyToCode CLI."""
+    """Main async function for LazyToCode Phase 2 CLI."""
     
     logger = None
     
     try:
         # Parse command line arguments
-        args = parse_arguments()
+        args = parse_phase2_arguments()
         
         # Setup logging with debug directory
         debug_dir = args.output_dir / "debug" if args.debug else None
         logger = setup_logger(
             debug_mode=args.debug,
-            log_file="lazytocode.log" if args.debug else None,
+            log_file="lazytocode_phase2.log" if args.debug else None,
             debug_dir=debug_dir
         )
         
-        logger.info("LazyToCode starting...")
+        logger.info("LazyToCode Phase 2 starting...")
         logger.debug(f"Arguments: {vars(args)}")
         
         # Initialize model client
@@ -174,8 +168,8 @@ async def main():
         # Create project info
         project_info = ProjectInfo(
             prompt=args.prompt_content,
-            project_type="auto_detect",  # Let the model determine project type
-            language="auto_detect",  # Let the model determine the appropriate language
+            project_type="auto_detect",  # Could be enhanced to detect project type
+            language="python",  # Phase 2 focuses on Python first
             output_dir=str(args.output_dir)
         )
         
@@ -185,9 +179,7 @@ async def main():
         planner = PlannerAgent(
             name="PlannerAgent",
             model_client=model_client,
-            output_dir=args.output_dir,
-            max_phases=args.max_phases,
-            debug_mode=args.debug
+            output_dir=args.output_dir
         )
         
         writer = WriterAgent(
@@ -210,8 +202,7 @@ async def main():
         orchestrator = WorkflowOrchestrator(
             project_info=project_info,
             max_attempts=args.retry_attempts,
-            timeout_minutes=args.timeout,
-            interactive_mode=args.interactive
+            timeout_minutes=args.timeout
         )
         
         # Register agents
@@ -223,8 +214,8 @@ async def main():
         
         # Execute workflow
         logger.info("Starting multi-agent workflow...")
-        print("🚀 Starting LazyToCode multi-agent workflow...")
-        print(f"📝 Project: {args.prompt_content}")
+        print("🚀 Starting LazyToCode Phase 2 workflow...")
+        print(f"📝 Project: {args.prompt_content[:100]}{'...' if len(args.prompt_content) > 100 else ''}")
         print(f"📁 Output: {args.output_dir}")
         print(f"🤖 Model: {args.model} ({args.model_provider})")
         print(f"🔄 Max attempts per phase: {args.retry_attempts}")
@@ -343,7 +334,7 @@ async def main():
     
     finally:
         if logger:
-            logger.info("LazyToCode finished")
+            logger.info("LazyToCode Phase 2 finished")
 
 
 def cli_main():

@@ -42,7 +42,17 @@ class ModelClientFactory:
         
         endpoint = kwargs.get('endpoint', os.getenv('OLLAMA_ENDPOINT', 'http://localhost:11434'))
         
-        self.logger.info(f"Creating Ollama client with model: {model}, endpoint: {endpoint}")
+        # Configure context window size from environment variable
+        num_ctx = kwargs.get('num_ctx', os.getenv('OLLAMA_NUM_CTX'))
+        if num_ctx:
+            num_ctx = int(num_ctx)
+        
+        # Build options dictionary for Ollama configuration
+        options = kwargs.get('options', {})
+        if num_ctx:
+            options['num_ctx'] = num_ctx
+        
+        self.logger.info(f"Creating Ollama client with model: {model}, endpoint: {endpoint}, num_ctx: {num_ctx}")
         
         try:
             # Create model info for the model
@@ -56,14 +66,25 @@ class ModelClientFactory:
                     structured_output=True
                 )
             
-            client = OllamaChatCompletionClient(
-                model=model,
-                host=endpoint,
-                model_info=model_info,
-                **kwargs
-            )
+            # Prepare client configuration
+            client_config = {
+                'model': model,
+                'host': endpoint,
+                'model_info': model_info
+            }
             
-            self.logger.info("Ollama client created successfully")
+            # Add options if we have any configured
+            if options:
+                client_config['options'] = options
+            
+            # Add any additional kwargs (excluding ones we've already handled)
+            for key, value in kwargs.items():
+                if key not in ['endpoint', 'num_ctx', 'options']:
+                    client_config[key] = value
+            
+            client = OllamaChatCompletionClient(**client_config)
+            
+            self.logger.info(f"Ollama client created successfully with options: {options}")
             return client
             
         except Exception as e:

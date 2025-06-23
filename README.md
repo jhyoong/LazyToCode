@@ -1,280 +1,214 @@
 # LazyToCode
 
-An AI-powered coding agent that generates clean, production-ready code using Microsoft's Autogen framework. LazyToCode intelligently extracts code from AI responses, removing explanations and formatting to deliver pure, executable code files.
+AI-powered multi-agent development system that generates complete software projects from simple prompts. Uses specialized agents for planning, writing, and reviewing code to create production-ready applications.
 
-## ✨ Features
+## Features
 
-- 🤖 **AI Code Generation** - Uses Microsoft Autogen with Ollama/LlamaCpp models
-- 🧹 **Smart Code Extraction** - Automatically extracts clean code from AI responses
-- 🔍 **Language Detection** - Auto-detects programming languages and assigns proper file extensions
-- 📝 **Debug Mode** - Saves both clean code and full AI responses for analysis
-- 🎯 **Multi-Language Support** - Python, JavaScript, Java, C++, HTML, CSS, SQL, Bash, and more
-- ⚡ **Async Architecture** - High-performance async implementation
-- 🔒 **Secure Configuration** - Environment-based secrets management
-- 📁 **Flexible Output** - Configurable output directories and file naming
+- **Multi-Agent Architecture** - Planner, Writer, and Reviewer agents work together
+- **Complete Project Generation** - Creates multi-file projects with documentation and tests
+- **Phase-Based Development** - Complex projects split into manageable phases
+- **Interactive Mode** - Review, modify, or reject plans before code generation
+- **Model Support** - Works with Ollama and LlamaCpp providers
+- **Workflow Orchestration** - Automated retry and validation loops
+- **Debug Mode** - Comprehensive logging and plan persistence
 
-## 🛠️ Installation
+## Installation
 
-### Prerequisites
-- Python 3.10+
-- Ollama (for local models) or LlamaCpp support
+**Prerequisites:** Python 3.10+, Ollama or LlamaCpp
 
-### Setup
 ```bash
-# Clone the repository
 git clone <repository-url>
 cd LazyToCode
-
-# Create virtual environment
 python -m venv lazyenv
-source lazyenv/bin/activate  # On Windows: lazyenv\Scripts\activate
-
-# Install dependencies
+source lazyenv/bin/activate
 pip install -r requirements.txt
-
-# Configure environment
-cp .env.example .env
-# Edit .env with your model configurations
+cp .env.example .env  # Edit with your model settings
 ```
 
-## 🚀 Quick Start
+## Usage
 
-### Basic Usage
 ```bash
-# Generate a simple Python script
-python main.py --prompt "Write a hello world Python script"
+# Generate a complete project
+python main.py --prompt "Create a CLI calculator with tests"
 
-# Generate a complex function
-python main.py --prompt "Create a Python function to calculate fibonacci numbers with memoization"
+# Use interactive mode to review and approve plans
+python main.py --prompt "Build a web API" --interactive
 
-# Generate with debug information
-python main.py --prompt "Build a REST API with FastAPI" --debug
+# Use file input with debug mode
+python main.py --prompt ./project_spec.txt --debug
+
+# Custom output and model
+python main.py --prompt "Build a web API" --output-dir ./api --model llama3
 ```
 
-### Advanced Usage
-```bash
-# Custom output directory
-python main.py --prompt "Create a web scraper" --output_dir ./scrapers
+## Options
 
-# Use different model
-python main.py --prompt "Build a calculator" --model llama3
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--prompt` | Text prompt or .txt file path | Required |
+| `--output-dir` | Output directory | `./output` |
+| `--model` | Model name | `qwen2.5-coder:14b` |
+| `--model-provider` | `ollama` or `llamacpp` | `ollama` |
+| `--retry-attempts` | Max retry attempts per phase | `3` |
+| `--max-phases` | Maximum number of phases | `10` |
+| `--timeout` | Workflow timeout in minutes | `60` |
+| `--interactive` | Enable plan approval mode | `false` |
+| `--debug` | Verbose logging | `false` |
 
-# Use LlamaCpp provider
-python main.py --prompt "Create a game" --model_provider llamacpp
+## How It Works
 
-# File-based prompts
-python main.py --prompt ./complex_request.txt --debug
-```
+**Multi-Agent Workflow:**
 
-## 📋 Command Line Options
+1. **Planner Agent** - Analyzes prompt and creates detailed implementation plan
+2. **Writer Agent** - Generates code files based on the plan  
+3. **Reviewer Agent** - Validates implementation against success criteria
+4. **Orchestrator** - Coordinates agents with retry logic and phase management
 
-| Option | Description | Default | Required |
-|--------|-------------|---------|----------|
-| `--prompt` | Text prompt or path to .txt file | - | ✅ |
-| `--output_dir` | Output directory for generated code | `./output` | ❌ |
-| `--model` | Model name to use | `Qwen2.5-Coder` | ❌ |
-| `--model_provider` | Model provider (`ollama` or `llamacpp`) | `ollama` | ❌ |
-| `--debug` | Enable verbose logging and save full responses | `false` | ❌ |
-| `--help` | Show help message | - | ❌ |
+**Project Generation:**
+- Complex projects are split into phases
+- Each phase is implemented and reviewed before proceeding
+- Automatic retry on validation failures (configurable attempts)
+- Complete project structure with documentation and tests
 
-## 🧠 How It Works
-
-### Smart Code Extraction
-
-LazyToCode intelligently processes AI model responses to extract clean, executable code:
-
-**Before (Raw AI Response):**
-```
-Certainly! Below is a Python function that calculates Fibonacci numbers using memoization...
-
-```python
-def fibonacci(n, memo=None):
-    if memo is None:
-        memo = {}
-    # ... rest of code
-```
-
-### Explanation:
-- The function uses memoization to improve performance...
-- Base cases handle n=0 and n=1...
-```
-
-**After (Clean Extracted Code):**
-```python
-def fibonacci(n, memo=None):
-    if memo is None:
-        memo = {}
-    # ... rest of code
-```
-
-### Debug Mode
-
-When using `--debug`, LazyToCode saves two files:
-
-1. **Clean Code File** (e.g., `fibonacci.py`) - Production-ready code
-2. **Debug Response File** (e.g., `fibonacci_full_response.md`) - Complete AI response with explanations
-
-## 🏗️ Project Structure
+## Project Structure
 
 ```
 LazyToCode/
-├── main.py                 # CLI entry point
-├── requirements.txt        # Dependencies
-├── .env.example           # Environment template
-├── .env                   # Your configuration (gitignored)
-├── config/
+├── main.py                # CLI entry point  
+├── orchestrator.py        # Workflow coordination
+├── agents/                # Multi-agent system
+│   ├── planner_agent.py   # Project planning
+│   ├── writer_agent.py    # Code generation
+│   ├── reviewer_agent.py  # Validation
+│   ├── base_agent.py      # Foundation
+│   ├── coding_assistant.py # Legacy agent
+│   └── user_proxy.py      # Agent communication
+├── config/                # Model configuration
 │   └── agent_config.py    # Model client factory
-├── agents/
-│   ├── coding_assistant.py # AI coding agent
-│   └── user_proxy.py      # Task coordination
-├── utils/
-│   ├── cli_parser.py      # Command line parsing
-│   ├── code_extractor.py  # Smart code extraction
-│   ├── file_handler.py    # Async file operations
-│   └── logger.py          # Logging system
-└── output/                # Generated code directory
+├── utils/                 # Core utilities
+│   ├── logger.py          # Logging system
+│   ├── agent_messages.py  # Message structures
+│   ├── workflow_state.py  # State management
+│   ├── file_handler.py    # File operations
+│   ├── interactive_reviewer.py # Interactive plan review
+│   └── plan_formatter.py  # Plan presentation formatting
+└── output/                # Generated projects
 ```
 
-## ⚙️ Configuration
+## Configuration
 
-### Environment Variables (.env)
+Create `.env` file:
 
 ```bash
-# Ollama Configuration
+# Ollama
 OLLAMA_ENDPOINT=http://localhost:11434
-OLLAMA_MODEL=Qwen2.5-Coder
+OLLAMA_MODEL=qwen2.5-coder:14b
 
-# LlamaCpp Configuration
+# LlamaCpp  
 LLAMACPP_MODEL_PATH=/path/to/model.gguf
-LLAMACPP_REPO_ID=unsloth/Qwen2.5-Coder-7B-Instruct-GGUF
-LLAMACPP_FILENAME=Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf
 LLAMACPP_N_GPU_LAYERS=-1
 LLAMACPP_N_CTX=4096
-
-# Default Settings
-DEFAULT_OUTPUT_DIR=./output
-DEBUG_MODE=false
 ```
 
-## 🎯 Supported Languages
+## Interactive Mode
 
-LazyToCode automatically detects and properly formats code for:
+The `--interactive` flag enables plan approval mode, allowing you to review and modify implementation plans before code generation begins.
 
-- **Python** (`.py`)
-- **JavaScript** (`.js`)
-- **TypeScript** (`.ts`)
-- **Java** (`.java`)
-- **C/C++** (`.c`/`.cpp`)
-- **Rust** (`.rs`)
-- **Go** (`.go`)
-- **HTML** (`.html`)
-- **CSS** (`.css`)
-- **SQL** (`.sql`)
-- **Bash/Shell** (`.sh`)
-- **JSON** (`.json`)
-- **YAML** (`.yaml`)
-- **Markdown** (`.md`)
+### How Interactive Mode Works
 
-## 📖 Examples
+1. **Plan Generation** - AI generates an initial implementation plan
+2. **Plan Review** - Plan is presented in a user-friendly format
+3. **User Decision** - Choose to approve, modify, or reject the plan
+4. **Plan Modification** - Request changes with natural language feedback
+5. **Iterative Refinement** - Repeat modification until satisfied
+6. **Code Generation** - Approved plan proceeds to code generation
 
-### Example 1: Simple Script
+### Interactive Commands
+
 ```bash
-python main.py --prompt "Create a Python script to read a CSV file and calculate averages"
+# During plan review, use these commands:
+approve (a)  - Approve plan and proceed with code generation
+modify (m)   - Request modifications with feedback
+reject (r)   - Reject plan and exit
+details (d)  - Show detailed plan breakdown
+help (h)     - Show command help
 ```
 
-**Output:** Clean Python script with CSV processing logic
+### Interactive Mode Examples
 
-### Example 2: Complex Application
+**Basic Interactive Usage:**
 ```bash
-python main.py --prompt "Build a Flask web application with user authentication" --debug
+python main.py --prompt "Create a web scraper" --interactive
 ```
 
-**Output:** 
-- `generated_code_TIMESTAMP.py` - Clean Flask application code
-- `generated_code_TIMESTAMP_full_response.md` - Complete AI explanation
-
-### Example 3: Multi-language Detection
+**Interactive with Custom Settings:**
 ```bash
-python main.py --prompt "Create an HTML page with embedded JavaScript for a calculator"
+python main.py --prompt "Build a REST API" --interactive --debug --max-phases 5
 ```
 
-**Output:** Properly formatted HTML file with embedded JavaScript
+**Sample Interactive Session:**
+```
+📋 Generated Implementation Plan
+═══════════════════════════════
 
-## 🚀 Advanced Features
+🎯 Project: Web Scraper Tool
+📁 Type: CLI Tool
+🏗️  Complexity: 3/5
+📦 Main Language: Python
 
-### Async Architecture
-LazyToCode uses modern async/await patterns for high performance:
-- Non-blocking file operations
-- Concurrent model API calls
-- Efficient resource management
+📋 PHASES (3 total):
+├─ Phase 1: Project Setup
+│  ├─ Files: setup.py, requirements.txt, README.md
+│  └─ Dependencies: requests, beautifulsoup4
+├─ Phase 2: Core Scraper Implementation
+│  ├─ Files: scraper.py, cli.py
+│  └─ Dependencies: argparse, logging
+└─ Phase 3: Testing & Documentation
+   ├─ Files: test_scraper.py, docs/
+   └─ Dependencies: pytest
 
-### Error Handling
-Comprehensive error handling with graceful fallbacks:
-- Model connectivity validation
-- File permission checks
-- Input validation and sanitization
-- User-friendly error messages
+Your choice: modify
+What would you like to modify? Add error handling and rate limiting
 
-### Backup and Versioning
-- Automatic file backups when overwriting
-- Timestamped file generation
-- Safe file writing operations
+🔄 Regenerating plan with your feedback...
+✅ Plan updated with your feedback
 
-## 🔧 Development
+[Updated plan displayed...]
 
-### Running Tests
+Your choice: approve
+✅ Plan approved! Proceeding with code generation...
+```
+
+## Examples
+
+**Simple Project:**
 ```bash
-# Install development dependencies
-pip install -r requirements-dev.txt
-
-# Run tests
-pytest tests/
-
-# Run with coverage
-pytest --cov=. tests/
+python main.py --prompt "Create a CLI calculator with error handling"
 ```
 
-## 📝 Logging
+**Complex Application:**
+```bash  
+python main.py --prompt "Build a FastAPI REST service with database integration" --debug
+```
 
-LazyToCode provides detailed logging:
+**Generated Output:**
+- Complete project structure with multiple files
+- Documentation (README.md, setup.py)
+- Test files and configuration
+- Debug logs and implementation plans (when using --debug)
 
-- **INFO**: Basic operation status
-- **DEBUG**: Detailed execution flow (use `--debug` flag)
-- **ERROR**: Error conditions with context
+## Status
 
-Log files are created in debug mode for troubleshooting.
+**Currently Implemented:**
+- ✅ Plan and Create workflow (Planner → Writer → Reviewer)
+- ✅ Multi-file project generation 
+- ✅ Phase-based development with retry logic
+- ✅ Interactive plan approval and modification mode
+- ✅ Ollama and LlamaCpp model support
 
-## 🤝 Model Providers
+**In Development:**
+- 🚧 Test and Fix workflow (Tester → Fixing agents)
+- 🚧 Containerized testing environment
+- 🚧 Build validation and error analysis
 
-### Ollama
-- **Local model hosting**
-- **GPU acceleration support**
-- **Wide model selection**
-- **Easy setup and management**
-
-### LlamaCpp
-- **GGUF format support**
-- **CPU and GPU inference**
-- **HuggingFace integration**
-- **Memory efficient**
-
-## 🔮 Future Enhancements
-
-- [ ] Support for OpenAPI endpoints
-- [ ] Interactive conversation mode
-- [ ] Code review and quality checking agents
-- [ ] Multi-file project generation
-- [ ] Template-based code generation
-- [ ] Web interface option
-
-
-## 🙏 Acknowledgments
-
-- **Microsoft Autogen** - Core agent framework
-- **Ollama** - Local model hosting
-- **LlamaCpp** - Efficient model inference
-- **Contributors** - Community support and feedback
-
----
-
-**LazyToCode** - Making AI code generation simple, clean, and production-ready! 🚀
+Built with Microsoft Autogen framework.

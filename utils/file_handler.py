@@ -238,3 +238,25 @@ Code File: {code_file.name}
         except Exception as e:
             self.logger.error(f"Failed to list files in output directory: {e}")
             return []
+    
+    async def write_file(self, file_path: Union[str, Path], content: str) -> Path:
+        """Write content to a specific file path."""
+        file_path = Path(file_path)
+        
+        try:
+            # Ensure parent directory exists
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Use asyncio to write file asynchronously
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(
+                None,
+                lambda: file_path.write_text(content, encoding='utf-8')
+            )
+            
+            self.logger.debug(f"Successfully wrote file: {file_path}")
+            return file_path
+            
+        except Exception as e:
+            self.logger.error(f"Failed to write file {file_path}: {e}")
+            raise

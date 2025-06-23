@@ -120,7 +120,7 @@ When generating code, consider the context and requirements carefully. Ask for c
             self.logger.error(f"Error processing prompt with model client: {e}")
             # Fallback to placeholder if model fails
             return f"""# Error: Model client failed to generate code
-# Prompt: {prompt[:100]}...
+# Prompt: {prompt}
 # Error: {str(e)}
 
 def placeholder_function():
