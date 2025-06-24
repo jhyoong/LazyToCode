@@ -1,0 +1,4 @@
+autogen-core>=0.6.1
+autogen-ext[ollama]>=0.6.1
+autogen-ext[llama-cpp]>=0.6.1
+python-dotenv>=1.0.0
