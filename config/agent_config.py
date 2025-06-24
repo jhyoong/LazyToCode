@@ -15,6 +15,11 @@ try:
 except ImportError:
     LlamaCppChatCompletionClient = None
 
+try:
+    from autogen_ext.models.openai import OpenAIChatCompletionClient
+except ImportError:
+    OpenAIChatCompletionClient = None
+
 from utils.logger import get_logger
 
 class ModelClientFactory:
@@ -31,6 +36,8 @@ class ModelClientFactory:
             return self._create_ollama_client(model, **kwargs)
         elif provider == "llamacpp":
             return self._create_llamacpp_client(model, **kwargs)
+        elif provider == "openai":
+            return self._create_openai_client(model, **kwargs)
         else:
             raise ValueError(f"Unsupported model provider: {provider}")
     
@@ -136,6 +143,51 @@ class ModelClientFactory:
             
         except Exception as e:
             self.logger.error(f"Failed to create LlamaCpp client: {e}")
+            raise
+    
+    def _create_openai_client(self, model: str, **kwargs) -> Optional[OpenAIChatCompletionClient]:
+        """Create and configure OpenAI model client for local endpoints."""
+        
+        if OpenAIChatCompletionClient is None:
+            raise ImportError("autogen-ext[openai] not installed. Install with: pip install autogen-ext[openai]")
+        
+        api_key = kwargs.get('api_key', os.getenv('OPENAI_API_KEY', 'local-key'))
+        base_url = kwargs.get('base_url', os.getenv('OPENAI_BASE_URL', 'http://localhost:8000/v1'))
+        
+        self.logger.info(f"Creating OpenAI client with model: {model}, base_url: {base_url}")
+        
+        try:
+            # Create model info for local models
+            model_info = None
+            if ModelInfo is not None:
+                model_info = ModelInfo(
+                    vision=False,
+                    function_calling=True,
+                    json_output=True,
+                    family="local-model",
+                    structured_output=True
+                )
+            
+            # Prepare client configuration
+            client_config = {
+                'model': model,
+                'api_key': api_key,
+                'base_url': base_url,
+                'model_info': model_info
+            }
+            
+            # Add any additional kwargs (excluding ones we've already handled)
+            for key, value in kwargs.items():
+                if key not in ['api_key', 'base_url']:
+                    client_config[key] = value
+            
+            client = OpenAIChatCompletionClient(**client_config)
+            
+            self.logger.info("OpenAI client created successfully")
+            return client
+            
+        except Exception as e:
+            self.logger.error(f"Failed to create OpenAI client: {e}")
             raise
     
     async def validate_client(self, client, model_name: str) -> bool:

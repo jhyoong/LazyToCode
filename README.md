@@ -1,6 +1,9 @@
 # LazyToCode
 
-AI-powered multi-agent development system that generates complete software projects from simple prompts. Uses specialized agents for planning, writing, and reviewing code to create production-ready applications.
+> [!IMPORTANT]  
+> **This is a hobby project that's a work in progess. Expect bugs and breaking changes.**
+
+AI-powered multi-agent development system that generates complete software projects from simple prompts. Uses specialized agents for planning, writing, and reviewing code to create (hopefully) production-ready applications.
 
 ## Features
 

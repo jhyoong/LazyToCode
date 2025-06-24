@@ -44,9 +44,9 @@ Examples:
     parser.add_argument(
         "--model_provider",
         type=str,
-        choices=["ollama", "llamacpp"],
+        choices=["ollama", "llamacpp", "openai"],
         default="ollama",
-        help="Provider choice - 'ollama' or 'llamacpp' (default: ollama)"
+        help="Provider choice - 'ollama', 'llamacpp', or 'openai' (default: ollama)"
     )
     
     parser.add_argument(
