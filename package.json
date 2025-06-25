@@ -1,0 +1,24 @@
+{
+  "name": "lazytocode",
+  "version": "1.0.0",
+  "description": "> [!IMPORTANT]   > **This is a hobby project that's a work in progess. Expect bugs and breaking changes.**",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jhyoong/LazyToCode.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/jhyoong/LazyToCode/issues"
+  },
+  "homepage": "https://github.com/jhyoong/LazyToCode#readme",
+  "dependencies": {
+    "@modelcontextprotocol/server-filesystem": "^2025.3.28"
+  }
+}

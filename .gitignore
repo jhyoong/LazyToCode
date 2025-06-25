@@ -198,3 +198,5 @@ lazyenv*
 
 # Output
 output*
+
+node_modules*
