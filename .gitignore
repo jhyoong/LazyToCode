@@ -200,3 +200,5 @@ lazyenv*
 output*
 
 node_modules*
+memory*
+test*

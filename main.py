@@ -18,6 +18,7 @@ from config.agent_config import ModelClientFactory
 from agents.planner_agent import PlannerAgent
 from agents.writer_agent import WriterAgent
 from agents.reviewer_agent import ReviewerAgent
+from agents.plan_reviewer_agent import PlanReviewerAgent
 from orchestrator import WorkflowOrchestrator
 from utils.agent_messages import ProjectInfo
 
@@ -34,6 +35,7 @@ Examples:
   python main.py --prompt "Create a Python CLI calculator"
   python main.py --prompt "Build a FastAPI REST API" --output-dir ./my_api --retry-attempts 2
   python main.py --prompt ./prompts/web_scraper.txt --model qwen2.5-coder:14b --debug
+  python main.py --prompt "Build a web scraper" --deep-plan --interactive
         """
     )
     
@@ -99,6 +101,12 @@ Examples:
         "--interactive",
         action="store_true",
         help="Enable interactive plan approval mode"
+    )
+    
+    parser.add_argument(
+        "--deep-plan",
+        action="store_true",
+        help="Enable deep planning mode with AI plan review and reflection"
     )
     
     args = parser.parse_args()
@@ -202,6 +210,16 @@ async def main():
             output_dir=args.output_dir
         )
         
+        # Create Plan Reviewer Agent if deep planning is enabled
+        plan_reviewer = None
+        if getattr(args, 'deep_plan', False):
+            plan_reviewer = PlanReviewerAgent(
+                name="PlanReviewerAgent",
+                model_client=model_client,
+                output_dir=args.output_dir,
+                debug_mode=args.debug
+            )
+        
         logger.info("Multi-agent system created successfully")
         
         # Create and configure orchestrator
@@ -211,13 +229,18 @@ async def main():
             project_info=project_info,
             max_attempts=args.retry_attempts,
             timeout_minutes=args.timeout,
-            interactive_mode=args.interactive
+            interactive_mode=args.interactive,
+            deep_plan_mode=getattr(args, 'deep_plan', False)
         )
         
         # Register agents
         orchestrator.register_agent("planner", planner)
         orchestrator.register_agent("writer", writer)
         orchestrator.register_agent("reviewer", reviewer)
+        
+        # Register Plan Reviewer Agent if deep planning is enabled
+        if plan_reviewer:
+            orchestrator.register_agent("plan_reviewer", plan_reviewer)
         
         logger.info("Workflow orchestrator initialized successfully")
         
@@ -228,6 +251,13 @@ async def main():
         print(f"📁 Output: {args.output_dir}")
         print(f"🤖 Model: {args.model} ({args.model_provider})")
         print(f"🔄 Max attempts per phase: {args.retry_attempts}")
+        
+        # Show mode indicators
+        if getattr(args, 'deep_plan', False):
+            print("🧠 Deep planning mode: ENABLED (AI plan review & reflection)")
+        elif args.interactive:
+            print("👤 Interactive mode: ENABLED (plan approval required)")
+        
         print()
         
         result = await orchestrator.execute_workflow()

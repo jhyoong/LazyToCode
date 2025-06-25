@@ -152,7 +152,7 @@ class ModelClientFactory:
             raise ImportError("autogen-ext[openai] not installed. Install with: pip install autogen-ext[openai]")
         
         api_key = kwargs.get('api_key', os.getenv('OPENAI_API_KEY', 'local-key'))
-        base_url = kwargs.get('base_url', os.getenv('OPENAI_BASE_URL', 'http://localhost:8000/v1'))
+        base_url = kwargs.get('base_url', os.getenv('OPENAI_BASE_URL', 'http://localhost:8080/v1'))
         
         self.logger.info(f"Creating OpenAI client with model: {model}, base_url: {base_url}")
         

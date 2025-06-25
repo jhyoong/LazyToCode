@@ -17,6 +17,7 @@ from utils.agent_messages import (
 )
 from utils.workflow_state import WorkflowState, WorkflowStatus, PhaseStatus
 from utils.logger import get_agent_logger, LogContext, log_model_interaction
+from utils.deep_planner import DeepPlanningManager
 
 
 class WorkflowOrchestrator:
@@ -32,7 +33,8 @@ class WorkflowOrchestrator:
     """
     
     def __init__(self, project_info: ProjectInfo, max_attempts: int = 3, 
-                 timeout_minutes: int = 60, interactive_mode: bool = False):
+                 timeout_minutes: int = 60, interactive_mode: bool = False,
+                 deep_plan_mode: bool = False):
         """
         Initialize the orchestrator.
         
@@ -41,11 +43,13 @@ class WorkflowOrchestrator:
             max_attempts: Maximum attempts per phase before giving up
             timeout_minutes: Maximum time to spend on the entire workflow
             interactive_mode: Enable interactive plan approval mode
+            deep_plan_mode: Enable deep planning with AI plan review and reflection
         """
         self.project_info = project_info
         self.max_attempts = max_attempts
         self.timeout_seconds = timeout_minutes * 60
         self.interactive_mode = interactive_mode
+        self.deep_plan_mode = deep_plan_mode
         
         # Initialize workflow state
         self.workflow_state = WorkflowState(project_info, max_attempts)
@@ -67,6 +71,16 @@ class WorkflowOrchestrator:
         if self.interactive_mode:
             from utils.interactive_reviewer import InteractivePlanReviewer
             self.interactive_reviewer = InteractivePlanReviewer(self.logger)
+        
+        # Initialize deep planning manager if needed
+        self.deep_planning_manager = None
+        if self.deep_plan_mode:
+            self.deep_planning_manager = DeepPlanningManager(
+                output_dir=output_dir,
+                debug_mode=True,  # Enable debug mode for deep planning
+                max_iterations=3,
+                convergence_threshold=8.0
+            )
         
         self.logger.info(f"Orchestrator initialized for project: {project_info.project_type}",
                         extra={'agent_name': 'orchestrator', 'structured_data': {
@@ -99,7 +113,10 @@ class WorkflowOrchestrator:
     
     def get_required_agents(self) -> List[str]:
         """Get list of required agent names."""
-        return ["planner", "writer", "reviewer"]
+        required = ["planner", "writer", "reviewer"]
+        if self.deep_plan_mode:
+            required.append("plan_reviewer")
+        return required
     
     def validate_agents(self) -> bool:
         """Validate that all required agents are registered."""
@@ -298,8 +315,22 @@ class WorkflowOrchestrator:
                 
                 ctx.add_data("phases_count", phases_count)
                 
-                # Interactive plan approval if enabled
-                if self.interactive_mode and self.interactive_reviewer:
+                # Deep planning if enabled (takes precedence over interactive mode)
+                if self.deep_plan_mode and self.deep_planning_manager:
+                    deep_plan_result = await self._execute_deep_planning(project_plan_data)
+                    if not deep_plan_result["success"]:
+                        self.logger.error("Deep planning failed - using original plan")
+                        # Continue with original plan rather than failing
+                    else:
+                        # Use the improved plan from deep planning
+                        project_plan_data = deep_plan_result["final_plan"]
+                        self.logger.info(f"Deep planning completed with {deep_plan_result.get('total_iterations', 0)} iterations")
+                        
+                        # Save the final improved plan in the correct format for Writer Agent
+                        await self._save_final_plan_for_writer(project_plan_data)
+                
+                # Interactive plan approval if enabled (and not deep planning)
+                elif self.interactive_mode and self.interactive_reviewer:
                     approved_plan_data = await self._interactive_plan_review(project_plan_data)
                     if not approved_plan_data:
                         self.logger.info("Plan rejected by user in interactive mode")
@@ -447,6 +478,93 @@ class WorkflowOrchestrator:
         except Exception as e:
             self.logger.error(f"Error regenerating plan with feedback: {str(e)}")
             return None
+    
+    async def _execute_deep_planning(self, initial_plan_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute deep planning with reflection between Planner and Plan Reviewer agents.
+        
+        Args:
+            initial_plan_data: The initial plan dictionary to improve
+            
+        Returns:
+            Dictionary with deep planning results
+        """
+        
+        try:
+            self.logger.info("Starting deep planning process")
+            
+            # Get required agents
+            planner = self.agents.get("planner")
+            plan_reviewer = self.agents.get("plan_reviewer")
+            
+            if not planner:
+                return {"success": False, "error": "Planner agent not available"}
+            
+            if not plan_reviewer:
+                return {"success": False, "error": "Plan reviewer agent not available"}
+            
+            # Use deep planning manager to execute the reflection cycle
+            result = await self.deep_planning_manager.execute_deep_planning_cycle(
+                planner_agent=planner,
+                reviewer_agent=plan_reviewer,
+                initial_prompt=self.project_info.prompt,
+                project_context={"initial_plan": initial_plan_data}
+            )
+            
+            if result.get("success"):
+                # Display deep planning summary to user
+                self._display_deep_planning_summary(result)
+                
+                self.logger.info(f"Deep planning successful: {result.get('total_iterations', 0)} iterations, "
+                               f"score improvement: {result.get('best_score', 0):.1f}")
+            else:
+                self.logger.error(f"Deep planning failed: {result.get('error', 'Unknown error')}")
+            
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"Error during deep planning execution: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e),
+                "final_plan": initial_plan_data  # Fallback to original plan
+            }
+    
+    def _display_deep_planning_summary(self, deep_plan_result: Dict[str, Any]):
+        """Display a summary of the deep planning process to the user."""
+        
+        try:
+            print("\n🧠 DEEP PLANNING SUMMARY")
+            print("=" * 50)
+            
+            iterations = deep_plan_result.get('total_iterations', 0)
+            best_score = deep_plan_result.get('best_score', 0)
+            duration = deep_plan_result.get('duration_seconds', 0)
+            
+            print(f"🔄 Reflection Iterations: {iterations}")
+            print(f"📊 Final Plan Score: {best_score:.1f}/10")
+            print(f"⏱️  Deep Planning Duration: {duration:.1f}s")
+            
+            # Show improvement summary if available
+            improvement_summary = deep_plan_result.get('improvement_summary', {})
+            if improvement_summary.get('improvements_made'):
+                score_improvement = improvement_summary.get('score_improvement', 0)
+                if score_improvement > 0:
+                    print(f"📈 Score Improvement: +{score_improvement:.1f} points")
+                else:
+                    print("📊 Score maintained through iterations")
+            
+            # Show convergence info
+            convergence_info = deep_plan_result.get('convergence_info')
+            if convergence_info:
+                print(f"🎯 Convergence: {convergence_info.get('reason', 'Completed')}")
+            
+            print("✅ Deep planning completed - using improved plan")
+            print()
+            
+        except Exception as e:
+            self.logger.warning(f"Failed to display deep planning summary: {e}")
+            print("🧠 Deep planning completed successfully\n")
     
     async def _execute_project_phases(self) -> bool:
         """Execute all project phases with write-test-fix cycles."""
@@ -732,6 +850,38 @@ class WorkflowOrchestrator:
             "summary": self.workflow_state.get_workflow_summary()
         }
     
+    async def _save_final_plan_for_writer(self, plan_data: Dict[str, Any]):
+        """
+        Save the final improved plan in the correct format for the Writer Agent.
+        
+        Args:
+            plan_data: The final plan dictionary from deep planning
+        """
+        
+        try:
+            from datetime import datetime
+            import json
+            
+            # Calculate output directory the same way as in __init__
+            output_dir = Path(self.project_info.output_dir) if hasattr(self.project_info, 'output_dir') and self.project_info.output_dir else Path("./output")
+            
+            # Ensure output directory exists
+            output_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Generate filename with timestamp (following the same pattern as planner agent)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"plan_{timestamp}.json"
+            filepath = output_dir / filename
+            
+            # Save the clean plan data (not wrapped in review structure)
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(plan_data, f, indent=2, ensure_ascii=False)
+            
+            self.logger.info(f"Final improved plan saved to: {filepath}")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to save final plan for writer: {e}")
+
     async def cleanup(self):
         """Cleanup resources and shutdown agents."""
         self.logger.info("Cleaning up orchestrator...")

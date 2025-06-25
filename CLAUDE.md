@@ -18,7 +18,7 @@ Core rules:
 1. Never put hardcoded secrets or values into code directly. If necessary, always use a separate .env or config file.
 2. Suggest implementation plans in detail first before making changes to the code.
 3. Ask clarifying questions if provided context is not enough to make a strong, informed, and confident decision.
-4. Do not use emojis in the response unless explicity asked to.
+4. Do not use emojis in the response unless explicity asked to. Never use any emojis in code. 
 
 What has been completed:
 1. Plan and create workflow.
@@ -28,8 +28,11 @@ What has been completed:
 
 To Do:
 - Enable OpenAI API as model provider alternative
-- Code cleanup
+- Code cleanup - remove fallbacks, hardcoded stuff
+- Create Plan Reviewer Agent. 
 - Create Tester and Fixing agents.
 - Create test and fix workflow.
 - Fine-tune agents and workflows 
 - skip-review flag. This will enable a simple hardcoded filecheck based on plan.json, and not call the reviewer agent.
+- Add plan and no-plan mode, with option to choose different models for different workflows
+- Refactor agents to use reflection example? https://microsoft.github.io/autogen/stable//user-guide/core-user-guide/design-patterns/reflection.html
